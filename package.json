@@ -1,0 +1,23 @@
+{
+  "name": "telegram-store",
+  "version": "1.0.0",
+  "description": "Telegram store for managing products and wallet balances",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "@noble/secp256k1": "^2.2.3",
+    "bip39": "^3.1.0",
+    "dotenv": "^16.3.1",
+    "ethers": "^5.7.2",
+    "i18next": "^23.5.1",
+    "mysql2": "^3.6.1",
+    "node-telegram-bot-api": "^0.61.0",
+    "tronweb": "^5.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
