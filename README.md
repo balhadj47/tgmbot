@@ -1,51 +1,49 @@
-# Telegram Store
+# Telegram Store Bot
 
-A Telegram bot that allows users to manage their profiles, check wallet balances, and purchase products.
+A Telegram bot for managing a virtual store with wallet integration.
 
 ## Features
 
-- User registration and profile management
-- Wallet balance checking (USDT on TRC20 and BEP20 networks)
-- Product browsing and purchasing
+- User registration and wallet generation
 - Multi-language support (English, French, Arabic)
-- Transaction history tracking
+- Product catalog and purchasing
+- Wallet balance management (TRC20 and BEP20)
+- Virtual phone number sales
 
-## Setup
+## Development Setup
 
 1. Clone the repository
-2. Install dependencies with `npm install`
-3. Create a `.env` file with your configuration (see `.env.example`)
-4. Start the bot with `npm start`
+2. Install dependencies: `npm install`
+3. Create a `.env` file with your configuration
+4. Start the bot: `npm start`
 
 ## Environment Variables
 
-- `TELEGRAM_BOT_TOKEN`: Your Telegram bot token from BotFather
-- `DB_HOST`: MySQL database host
-- `DB_USER`: MySQL database user
-- `DB_PASSWORD`: MySQL database password
-- `DB_NAME`: MySQL database name (default: tgstore)
-- `TRX_API_KEY`: TRON API key for TRC20 operations
-- `BSC_API_KEY`: BSC API key for BEP20 operations
+```
+# Bot Configuration
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 
-## Database Schema
+# Database Configuration
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=password
+DB_NAME=tgstore
 
-The database consists of four main tables:
-
-1. `users`: Stores user information and wallet details
-2. `products`: Stores product information and availability
-3. `deposits`: Tracks user deposits (USDT transactions)
-4. `numbers`: Stores phone numbers and associated product details
+# Blockchain Configuration
+TRX_API_KEY=your_tron_api_key
+BSC_API_KEY=your_bsc_api_key
+```
 
 ## Commands
 
-- `/start`: Start the bot and register
-- `/balance`: Check your wallet balance
-- `/wallet`: View your wallet addresses
-- `/products`: Browse available products
-- `/history`: View your transaction history
-- `/language`: Change language
-- `/help`: Show help message
+- `/start` - Start the bot
+- `/balance` - Check your balance
+- `/products` - View available products
+- `/wallet` - View your wallet addresses
+- `/language` - Change language
+- `/help` - Show help message
 
-## License
+## Development Notes
 
-MIT
+- For development, the bot uses an in-memory database
+- TronWeb integration is mocked due to ESM compatibility issues

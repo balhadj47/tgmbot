@@ -1,6 +1,6 @@
 const { t, changeLanguage } = require('./i18n');
 const { updateUserLanguage, getUserById } = require('./users');
-const { getProductById, purchaseProduct } = require('./products');
+const { getProductById, purchaseProduct, getAllProducts } = require('./products');
 const { updateUserBalances } = require('./wallet');
 
 // Setup callback query handlers
@@ -58,7 +58,6 @@ function setupCallbacks(bot) {
           const product = await getProductById(productId);
           
           // Send success message
-          bot.answerCallbackQuery<boltAction type="file" filePath="src/callbacks.js">          // Send success message
           bot.answerCallbackQuery(callbackQuery.id, { text: 'Purchase successful!' });
           bot.sendMessage(chatId, t('buy_success', {
             name: product.name,

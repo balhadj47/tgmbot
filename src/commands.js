@@ -1,49 +1,79 @@
-const { t, changeLanguage } = require('./i18n');
-const { registerUser, getUserById, updateUserLanguage, getUserTransactionHistory } = require('./users');
-const { updateUserBalances } = require('./wallet');
-const { getAllProducts, getProductById, purchaseProduct, getUserNumbers } = require('./products');
+const { t } = require('./i18n');
+const { userExists, createUser, getUser } = require('./database');
+const { generateWallet, updateUserBalances } = require('./wallet');
+const { getAllProducts } = require('./products');
 
 // Setup bot commands
 function setupCommands(bot) {
   // Start command
   bot.onText(/\/start/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const username = msg.from.username || '';
+    const firstName = msg.from.first_name || '';
+    const lastName = msg.from.last_name || '';
+    
     try {
-      const chatId = msg.chat.id;
-      const user = await registerUser(msg.from);
+      // Check if user exists
+      const exists = await userExists(userId);
       
-      // Set user language
-      if (user.language) {
-        changeLanguage(user.language);
+      if (!exists) {
+        // Generate wallet for new user
+        const wallet = await generateWallet();
+        
+        // Create new user
+        await createUser({
+          userId,
+          username,
+          firstName,
+          lastName,
+          language: 'en',
+          trxAddress: wallet.trxAddress,
+          bscAddress: wallet.bscAddress,
+          mnemonic: wallet.mnemonic
+        });
+        
+        console.log(`New user registered: ${userId}`);
       }
       
-      // Send welcome message
+      // Send welcome message with language selection
       bot.sendMessage(chatId, t('welcome'), {
         reply_markup: {
-          keyboard: [
-            [{ text: '💰 Balance' }, { text: '👛 Wallet' }],
-            [{ text: '🛒 Products' }, { text: '📜 History' }],
-            [{ text: '🌐 Language' }, { text: '❓ Help' }]
-          ],
-          resize_keyboard: true
+          inline_keyboard: [
+            [
+              { text: '🇺🇸 English', callback_data: 'lang_en' },
+              { text: '🇫🇷 Français', callback_data: 'lang_fr' }
+            ],
+            [
+              { text: '🇸🇦 العربية', callback_data: 'lang_ar' }
+            ]
+          ]
         }
       });
     } catch (error) {
       console.error('Error in start command:', error);
-      bot.sendMessage(msg.chat.id, t('error'));
+      bot.sendMessage(chatId, 'An error occurred. Please try again.');
     }
   });
-
+  
   // Balance command
-  bot.onText(/\/balance|💰 Balance/, async (msg) => {
+  bot.onText(/\/balance/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
     try {
-      const chatId = msg.chat.id;
-      const userId = msg.from.id;
-      
       // Update user balances
       const balances = await updateUserBalances(userId);
       
+      // Get user data
+      const user = await getUser(userId);
+      
+      if (!user) {
+        bot.sendMessage(chatId, 'Please use /start to register first.');
+        return;
+      }
+      
       // Format last refresh time
-      const user = await getUserById(userId);
       const lastRefresh = user.last_balance_refresh 
         ? new Date(user.last_balance_refresh).toLocaleString() 
         : 'Never';
@@ -63,46 +93,20 @@ function setupCommands(bot) {
       });
     } catch (error) {
       console.error('Error in balance command:', error);
-      bot.sendMessage(msg.chat.id, t('error'));
+      bot.sendMessage(chatId, 'An error occurred. Please try again.');
     }
   });
-
-  // Wallet command
-  bot.onText(/\/wallet|👛 Wallet/, async (msg) => {
-    try {
-      const chatId = msg.chat.id;
-      const userId = msg.from.id;
-      
-      // Get user wallet addresses
-      const user = await getUserById(userId);
-      
-      if (!user) {
-        return bot.sendMessage(chatId, t('error'));
-      }
-      
-      // Send wallet message
-      bot.sendMessage(chatId, t('wallet', {
-        trx: user.trx_address,
-        bsc: user.bsc_address
-      }), {
-        parse_mode: 'Markdown'
-      });
-    } catch (error) {
-      console.error('Error in wallet command:', error);
-      bot.sendMessage(msg.chat.id, t('error'));
-    }
-  });
-
+  
   // Products command
-  bot.onText(/\/products|🛒 Products/, async (msg) => {
+  bot.onText(/\/products/, async (msg) => {
+    const chatId = msg.chat.id;
+    
     try {
-      const chatId = msg.chat.id;
-      
-      // Get all products
       const products = await getAllProducts();
       
       if (products.length === 0) {
-        return bot.sendMessage(chatId, 'No products available at the moment.');
+        bot.sendMessage(chatId, 'No products available at the moment.');
+        return;
       }
       
       // Send products message
@@ -115,99 +119,61 @@ function setupCommands(bot) {
       });
     } catch (error) {
       console.error('Error in products command:', error);
-      bot.sendMessage(msg.chat.id, t('error'));
+      bot.sendMessage(chatId, 'An error occurred. Please try again.');
     }
   });
-
-  // History command
-  bot.onText(/\/history|📜 History/, async (msg) => {
+  
+  // Wallet command
+  bot.onText(/\/wallet/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
     try {
-      const chatId = msg.chat.id;
-      const userId = msg.from.id;
+      // Get user data
+      const user = await getUser(userId);
       
-      // Get user transaction history
-      const history = await getUserTransactionHistory(userId);
-      
-      if (history.purchases.length === 0 && history.deposits.length === 0) {
-        return bot.sendMessage(chatId, t('history_empty'));
+      if (!user) {
+        bot.sendMessage(chatId, 'Please use /start to register first.');
+        return;
       }
       
-      // Format purchases
-      let message = '📜 *Transaction History*\n\n';
-      
-      if (history.purchases.length > 0) {
-        message += '*Purchases:*\n';
-        history.purchases.forEach((purchase, index) => {
-          if (index < 5) { // Limit to 5 most recent purchases
-            const date = new Date(purchase.purchase_date).toLocaleDateString();
-            message += `${date}: ${purchase.product_name} - ${purchase.price} USDT\n`;
-          }
-        });
-      }
-      
-      if (history.deposits.length > 0) {
-        message += '\n*Deposits:*\n';
-        history.deposits.forEach((deposit, index) => {
-          if (index < 5) { // Limit to 5 most recent deposits
-            const date = new Date(deposit.created_at).toLocaleDateString();
-            message += `${date}: ${deposit.amount} USDT (${deposit.network}) - ${deposit.status}\n`;
-          }
-        });
-      }
-      
-      // Send history message
-      bot.sendMessage(chatId, message, {
-        parse_mode: 'Markdown'
-      });
+      // Send wallet info
+      bot.sendMessage(chatId, t('wallet_info', {
+        trx: user.trx_address || 'Not available',
+        bsc: user.bsc_address || 'Not available'
+      }));
     } catch (error) {
-      console.error('Error in history command:', error);
-      bot.sendMessage(msg.chat.id, t('error'));
+      console.error('Error in wallet command:', error);
+      bot.sendMessage(chatId, 'An error occurred. Please try again.');
     }
   });
-
+  
   // Language command
-  bot.onText(/\/language|🌐 Language/, (msg) => {
-    try {
-      const chatId = msg.chat.id;
-      
-      // Send language selection message
-      bot.sendMessage(chatId, t('select_language'), {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '🇺🇸 English', callback_data: 'lang_en' },
-              { text: '🇫🇷 Français', callback_data: 'lang_fr' },
-              { text: '🇸🇦 العربية', callback_data: 'lang_ar' }
-            ]
+  bot.onText(/\/language/, (msg) => {
+    const chatId = msg.chat.id;
+    
+    // Send language selection
+    bot.sendMessage(chatId, t('welcome'), {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '🇺🇸 English', callback_data: 'lang_en' },
+            { text: '🇫🇷 Français', callback_data: 'lang_fr' }
+          ],
+          [
+            { text: '🇸🇦 العربية', callback_data: 'lang_ar' }
           ]
-        }
-      });
-    } catch (error) {
-      console.error('Error in language command:', error);
-      bot.sendMessage(msg.chat.id, t('error'));
-    }
+        ]
+      }
+    });
   });
-
+  
   // Help command
-  bot.onText(/\/help|❓ Help/, (msg) => {
-    try {
-      const chatId = msg.chat.id;
-      
-      // Send help message
-      bot.sendMessage(chatId, t('help'));
-    } catch (error) {
-      console.error('Error in help command:', error);
-      bot.sendMessage(msg.chat.id, t('error'));
-    }
-  });
-
-  // Handle text messages that don't match commands
-  bot.on('message', (msg) => {
-    // Skip messages that are commands or handled by other handlers
-    if (msg.text && !msg.text.startsWith('/') && 
-        !['💰 Balance', '👛 Wallet', '🛒 Products', '📜 History', '🌐 Language', '❓ Help'].includes(msg.text)) {
-      bot.sendMessage(msg.chat.id, t('help'));
-    }
+  bot.onText(/\/help/, (msg) => {
+    const chatId = msg.chat.id;
+    
+    // Send help message
+    bot.sendMessage(chatId, t('help'));
   });
 }
 

@@ -1,94 +1,98 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-// Create a connection pool
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+// Create an in-memory database for development
+const inMemoryDb = {
+  users: [],
+  products: [],
+  deposits: [],
+  numbers: []
+};
 
-// Execute SQL queries
-async function query(sql, params) {
-  return await pool.execute(sql, params);
+// Mock query function for in-memory database
+async function query(sql, params = []) {
+  console.log(`Executing query: ${sql}`);
+  console.log(`With params: ${params}`);
+  
+  // Simple mock implementation
+  if (sql.includes('CREATE TABLE')) {
+    return [[], []];
+  }
+  
+  if (sql.includes('SELECT * FROM users WHERE user_id = ?')) {
+    const userId = params[0];
+    const user = inMemoryDb.users.find(u => u.user_id === userId);
+    return [[user || {}], []];
+  }
+  
+  if (sql.includes('INSERT INTO users')) {
+    const userId = params[0];
+    inMemoryDb.users.push({
+      user_id: userId,
+      username: params[1],
+      first_name: params[2],
+      last_name: params[3],
+      language: params[4],
+      balance: 0,
+      usdt_trc20_balance: 0,
+      usdt_bsc20_balance: 0,
+      trx_address: params[5],
+      bsc_address: params[6],
+      mnemonic: params[7],
+      created_at: new Date(),
+      last_balance_refresh: null
+    });
+    return [{ insertId: inMemoryDb.users.length }, []];
+  }
+  
+  if (sql.includes('UPDATE users SET')) {
+    // Mock update
+    return [{ affectedRows: 1 }, []];
+  }
+  
+  // Default empty response
+  return [[], []];
 }
 
 // Setup database tables if they don't exist
 async function setupDatabase() {
   try {
-    // Create users table
-    await query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id BIGINT NOT NULL UNIQUE,
-        username VARCHAR(255),
-        first_name VARCHAR(255),
-        last_name VARCHAR(255),
-        language VARCHAR(10) DEFAULT 'en',
-        balance DECIMAL(18, 6) DEFAULT 0,
-        usdt_trc20_balance DECIMAL(18, 6) DEFAULT 0,
-        usdt_bsc20_balance DECIMAL(18, 6) DEFAULT 0,
-        trx_address VARCHAR(255),
-        bsc_address VARCHAR(255),
-        mnemonic TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        last_balance_refresh TIMESTAMP,
-        INDEX (user_id)
-      )
-    `);
-
-    // Create products table
-    await query(`
-      CREATE TABLE IF NOT EXISTS products (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        price DECIMAL(18, 6) NOT NULL,
-        category VARCHAR(100),
-        stock INT DEFAULT 0,
-        image_url VARCHAR(255),
-        active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Create deposits table
-    await query(`
-      CREATE TABLE IF NOT EXISTS deposits (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id BIGINT NOT NULL,
-        amount DECIMAL(18, 6) NOT NULL,
-        network VARCHAR(10) NOT NULL,
-        tx_hash VARCHAR(255),
-        status VARCHAR(20) DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX (user_id),
-        FOREIGN KEY (user_id) REFERENCES users(user_id)
-      )
-    `);
-
-    // Create numbers table
-    await query(`
-      CREATE TABLE IF NOT EXISTS numbers (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id BIGINT NOT NULL,
-        product_id INT NOT NULL,
-        phone_number VARCHAR(255) NOT NULL,
-        status VARCHAR(20) DEFAULT 'active',
-        purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        expiry_date TIMESTAMP,
-        INDEX (user_id),
-        FOREIGN KEY (user_id) REFERENCES users(user_id),
-        FOREIGN KEY (product_id) REFERENCES products(id)
-      )
-    `);
-
-    console.log('Database tables created successfully');
+    console.log('Using in-memory database for development');
+    
+    // Initialize in-memory tables
+    inMemoryDb.users = [];
+    inMemoryDb.products = [];
+    inMemoryDb.deposits = [];
+    inMemoryDb.numbers = [];
+    
+    // Add some sample products
+    inMemoryDb.products = [
+      {
+        id: 1,
+        name: 'Sample Product 1',
+        description: 'This is a sample product',
+        price: 10.0,
+        category: 'Sample',
+        stock: 10,
+        image_url: '',
+        active: true,
+        created_at: new Date()
+      },
+      {
+        id: 2,
+        name: 'Sample Product 2',
+        description: 'Another sample product',
+        price: 20.0,
+        category: 'Sample',
+        stock: 5,
+        image_url: '',
+        active: true,
+        created_at: new Date()
+      }
+    ];
+    
+    console.log('In-memory database initialized with sample data');
+    return true;
   } catch (error) {
     console.error('Error setting up database:', error);
     throw error;
@@ -97,24 +101,36 @@ async function setupDatabase() {
 
 // Check if user exists
 async function userExists(userId) {
-  const [rows] = await query('SELECT * FROM users WHERE user_id = ?', [userId]);
-  return rows.length > 0;
+  const user = inMemoryDb.users.find(u => u.user_id === userId);
+  return !!user;
 }
 
 // Create a new user
 async function createUser(userData) {
   const { userId, username, firstName, lastName, language, trxAddress, bscAddress, mnemonic } = userData;
   
-  await query(
-    'INSERT INTO users (user_id, username, first_name, last_name, language, trx_address, bsc_address, mnemonic) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [userId, username, firstName, lastName, language, trxAddress, bscAddress, mnemonic]
-  );
+  inMemoryDb.users.push({
+    user_id: userId,
+    username,
+    first_name: firstName,
+    last_name: lastName,
+    language,
+    balance: 0,
+    usdt_trc20_balance: 0,
+    usdt_bsc20_balance: 0,
+    trx_address: trxAddress,
+    bsc_address: bscAddress,
+    mnemonic,
+    created_at: new Date(),
+    last_balance_refresh: null
+  });
+  
+  return true;
 }
 
 // Get user by ID
 async function getUser(userId) {
-  const [rows] = await query('SELECT * FROM users WHERE user_id = ?', [userId]);
-  return rows[0];
+  return inMemoryDb.users.find(u => u.user_id === userId) || null;
 }
 
 module.exports = {
