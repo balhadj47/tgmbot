@@ -1,46 +1,40 @@
-const { db } = require('./database');
+// User management functionality
+const { addUser: dbAddUser, getUserById: dbGetUserById } = require('./database');
+
+// Register user
+async function registerUser(telegramUser) {
+  try {
+    const user = {
+      id: telegramUser.id,
+      username: telegramUser.username,
+      firstName: telegramUser.first_name,
+      lastName: telegramUser.last_name,
+      language: telegramUser.language_code,
+      registeredAt: new Date().toISOString(),
+      wallet: {
+        address: null,
+        balance: 0
+      }
+    };
+    
+    return dbAddUser(user);
+  } catch (error) {
+    console.error('Error registering user:', error);
+    throw new Error('Failed to register user');
+  }
+}
 
 // Get user by ID
 async function getUserById(id) {
-  let user = db.users.find(u => u.id === id);
-  
-  // If user doesn't exist, create a new one
-  if (!user) {
-    user = {
-      id,
-      trc20_address: '',
-      bep20_address: '',
-      language: 'en',
-      last_balance_refresh: null
-    };
-    db.users.push(user);
+  try {
+    return dbGetUserById(id);
+  } catch (error) {
+    console.error(`Error getting user with ID ${id}:`, error);
+    return null;
   }
-  
-  return user;
-}
-
-// Update user language
-async function updateUserLanguage(userId, language) {
-  const user = await getUserById(userId);
-  user.language = language;
-  return user;
-}
-
-// Set user wallet address
-async function setUserWalletAddress(userId, chain, address) {
-  const user = await getUserById(userId);
-  
-  if (chain === 'trc20') {
-    user.trc20_address = address;
-  } else if (chain === 'bep20') {
-    user.bep20_address = address;
-  }
-  
-  return user;
 }
 
 module.exports = {
-  getUserById,
-  updateUserLanguage,
-  setUserWalletAddress
+  registerUser,
+  getUserById
 };

@@ -1,0 +1,31 @@
+{
+  "users": [],
+  "products": [
+    {
+      "id": 1,
+      "name": "Digital Product 1",
+      "description": "This is a digital product description",
+      "price": 10,
+      "category": "digital",
+      "image": "https://via.placeholder.com/150"
+    },
+    {
+      "id": 2,
+      "name": "Digital Product 2",
+      "description": "Another digital product description",
+      "price": 20,
+      "category": "digital",
+      "image": "https://via.placeholder.com/150"
+    },
+    {
+      "id": 3,
+      "name": "Physical Product 1",
+      "description": "This is a physical product description",
+      "price": 30,
+      "category": "physical",
+      "image": "https://via.placeholder.com/150"
+    }
+  ],
+  "orders": [],
+  "transactions": []
+}

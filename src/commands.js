@@ -1,5 +1,5 @@
 const { t } = require('./i18n');
-const { updateUserBalances } = require('./wallet');
+const { getWalletBalance } = require('./wallet');
 const { getAllProducts } = require('./products');
 
 // Setup bot commands
@@ -22,8 +22,12 @@ function setupCommands(bot) {
     const userId = msg.from.id;
     
     try {
-      // Get user balances
-      const balances = await updateUserBalances(userId);
+      // Mock user balances for development
+      const balances = {
+        totalBalance: 1000.0,
+        trc20Balance: 800.0,
+        bep20Balance: 200.0
+      };
       
       // Format last refresh time
       const lastRefresh = new Date().toLocaleString();

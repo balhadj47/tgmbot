@@ -6,32 +6,33 @@ const { setupDatabase } = require('./database');
 const { setupCommands } = require('./commands');
 const { setupCallbacks } = require('./callbacks');
 const { i18n } = require('./i18n');
-const { initializeTronWeb } = require('./wallet');
+const { initializeTronWeb } = require('./tronWebWrapper');
 
 // Create Express app
 const app = express();
 app.use(bodyParser.json());
 
 // Bot configuration
-const token = process.env.TELEGRAM_BOT_TOKEN || 'YOUR_BOT_TOKEN';
-const webhookUrl = 'https://bot.rifose.com';
+const token = process.env.BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+if (!token) {
+  console.error('No bot token provided. Please set BOT_TOKEN in your .env file');
+  process.exit(1);
+}
+
+const webhookUrl = process.env.WEBHOOK_URL || 'https://bot.rifose.com';
 const port = process.env.PORT || 3000;
 
-// Create a bot instance with webhook
-const bot = new TelegramBot(token, { webHook: { port } });
+// Create a bot instance with polling instead of webhook for development
+const bot = new TelegramBot(token, { polling: true });
 
 async function startBot() {
   try {
     console.log('Starting Telegram Store Bot...');
     
-    // Set webhook
-    await bot.setWebHook(`${webhookUrl}/bot${token}`);
-    console.log(`Webhook set to: ${webhookUrl}/bot${token}`);
-    
-    // Initialize TronWeb
+    // Initialize TronWeb with fallback
     console.log('Initializing TronWeb...');
     await initializeTronWeb().catch(err => {
-      console.warn('TronWeb initialization warning (continuing anyway):', err.message);
+      console.warn('TronWeb initialization warning (continuing with mock):', err.message);
     });
     
     // Initialize database
@@ -47,12 +48,6 @@ async function startBot() {
     console.log('Setting up callback handlers...');
     setupCallbacks(bot);
 
-    // Webhook endpoint
-    app.post(`/bot${token}`, (req, res) => {
-      bot.processUpdate(req.body);
-      res.sendStatus(200);
-    });
-
     // Health check endpoint
     app.get('/health', (req, res) => {
       res.status(200).json({ status: 'ok' });
@@ -61,7 +56,7 @@ async function startBot() {
     // Start Express server
     app.listen(port, () => {
       console.log(`Express server is listening on port ${port}`);
-      console.log('Telegram bot started successfully with webhook');
+      console.log('Telegram bot started successfully with polling');
     });
   } catch (error) {
     console.error('Error starting bot:', error);
