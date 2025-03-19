@@ -1,24 +1,20 @@
-// This is a wrapper for TronWeb to handle ESM compatibility issues
-const { createRequire } = require('module');
-const require2 = createRequire(import.meta.url);
+const TronWeb = require('tronweb');
 
-// Dynamic import for @noble/secp256k1
-async function initTronWeb() {
+async function initializeTronWeb() {
   try {
-    // Import the ESM module dynamically
-    const secp256k1 = await import('@noble/secp256k1');
+    const tronWeb = new TronWeb({
+      fullHost: 'https://api.trongrid.io',
+      headers: { "TRON-PRO-API-KEY": process.env.TRX_API_KEY },
+    });
     
-    // Make it globally available for TronWeb
-    global.secp256k1 = secp256k1;
-    
-    // Now import TronWeb which will use the global secp256k1
-    const TronWeb = require2('tronweb');
-    
-    return TronWeb;
+    console.log('TronWeb initialized successfully');
+    return tronWeb;
   } catch (error) {
     console.error('Error initializing TronWeb:', error);
     throw error;
   }
 }
 
-module.exports = { initTronWeb };
+module.exports = {
+  initializeTronWeb
+};

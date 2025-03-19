@@ -1,36 +1,46 @@
-const { query } = require('./database');
-const { changeLanguage } = require('./i18n');
+const { db } = require('./database');
 
 // Get user by ID
-async function getUserById(userId) {
-  try {
-    const [rows] = await query('SELECT * FROM users WHERE user_id = ?', [userId]);
-    return rows[0] || null;
-  } catch (error) {
-    console.error('Error getting user:', error);
-    return null;
+async function getUserById(id) {
+  let user = db.users.find(u => u.id === id);
+  
+  // If user doesn't exist, create a new one
+  if (!user) {
+    user = {
+      id,
+      trc20_address: '',
+      bep20_address: '',
+      language: 'en',
+      last_balance_refresh: null
+    };
+    db.users.push(user);
   }
+  
+  return user;
 }
 
 // Update user language
 async function updateUserLanguage(userId, language) {
-  try {
-    await query(
-      'UPDATE users SET language = ? WHERE user_id = ?',
-      [language, userId]
-    );
-    
-    // Change i18next language
-    changeLanguage(language);
-    
-    return true;
-  } catch (error) {
-    console.error('Error updating user language:', error);
-    return false;
+  const user = await getUserById(userId);
+  user.language = language;
+  return user;
+}
+
+// Set user wallet address
+async function setUserWalletAddress(userId, chain, address) {
+  const user = await getUserById(userId);
+  
+  if (chain === 'trc20') {
+    user.trc20_address = address;
+  } else if (chain === 'bep20') {
+    user.bep20_address = address;
   }
+  
+  return user;
 }
 
 module.exports = {
   getUserById,
-  updateUserLanguage
+  updateUserLanguage,
+  setUserWalletAddress
 };

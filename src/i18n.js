@@ -3,54 +3,53 @@ const i18next = require('i18next');
 // Initialize i18next
 i18next.init({
   lng: 'en',
-  fallbackLng: 'en',
   resources: {
     en: {
       translation: {
-        welcome: 'Welcome to the Telegram Store! Choose your language:',
+        welcome: 'Welcome to the Telegram Store! 🛍️\nUse /help to see available commands.',
+        help: 'Available commands:\n/start - Start the bot\n/balance - Check your balance\n/products - View available products\n/language - Change language\n/help - Show this help message',
+        language_selection: 'Please select your preferred language:',
         language_changed: 'Language changed successfully!',
         balance: 'Your current balance: {{balance}} USDT\n\nTRC20: {{trc20}} USDT\nBEP20: {{bep20}} USDT\n\nLast updated: {{time}}',
-        refresh_balance: 'Balance refreshed!',
         products: 'Available Products:',
-        product_details: '🛍️ {{name}}\n\n💰 Price: {{price}} USDT\n\n📝 Description: {{description}}\n\n📦 In stock: {{stock}}',
-        buy_success: 'You have successfully purchased {{name}} for {{price}} USDT!',
-        insufficient_funds: 'Insufficient funds. Please deposit more USDT.',
+        product_details: '🛍️ {{name}}\n\n💰 Price: {{price}} USDT\n📝 {{description}}\n\n📦 In stock: {{stock}}',
+        buy_success: 'Purchase successful!\nYou bought {{name}} for {{price}} USDT.',
+        insufficient_funds: 'Insufficient funds. Please top up your balance.',
         out_of_stock: 'This product is out of stock.',
-        error: 'An error occurred. Please try again later.',
-        wallet_info: 'Your wallet addresses:\n\nTRC20 (USDT): {{trx}}\n\nBEP20 (USDT): {{bsc}}\n\nSend USDT to these addresses to top up your balance.',
-        help: 'Available commands:\n\n/start - Start the bot\n/balance - Check your balance\n/products - View available products\n/wallet - View your wallet addresses\n/language - Change language\n/help - Show this help message'
+        refresh_balance: 'Balance refreshed!',
+        error: 'An error occurred. Please try again later.'
       }
     },
     fr: {
       translation: {
-        welcome: 'Bienvenue dans la boutique Telegram ! Choisissez votre langue:',
-        language_changed: 'Langue changée avec succès !',
+        welcome: 'Bienvenue à la Boutique Telegram! 🛍️\nUtilisez /help pour voir les commandes disponibles.',
+        help: 'Commandes disponibles:\n/start - Démarrer le bot\n/balance - Vérifier votre solde\n/products - Voir les produits disponibles\n/language - Changer de langue\n/help - Afficher ce message d\'aide',
+        language_selection: 'Veuillez sélectionner votre langue préférée:',
+        language_changed: 'Langue changée avec succès!',
         balance: 'Votre solde actuel: {{balance}} USDT\n\nTRC20: {{trc20}} USDT\nBEP20: {{bep20}} USDT\n\nDernière mise à jour: {{time}}',
-        refresh_balance: 'Solde actualisé !',
         products: 'Produits disponibles:',
-        product_details: '🛍️ {{name}}\n\n💰 Prix: {{price}} USDT\n\n📝 Description: {{description}}\n\n📦 En stock: {{stock}}',
-        buy_success: 'Vous avez acheté avec succès {{name}} pour {{price}} USDT !',
-        insufficient_funds: 'Fonds insuffisants. Veuillez déposer plus d\'USDT.',
+        product_details: '🛍️ {{name}}\n\n💰 Prix: {{price}} USDT\n📝 {{description}}\n\n📦 En stock: {{stock}}',
+        buy_success: 'Achat réussi!\nVous avez acheté {{name}} pour {{price}} USDT.',
+        insufficient_funds: 'Fonds insuffisants. Veuillez recharger votre solde.',
         out_of_stock: 'Ce produit est en rupture de stock.',
-        error: 'Une erreur s\'est produite. Veuillez réessayer plus tard.',
-        wallet_info: 'Vos adresses de portefeuille:\n\nTRC20 (USDT): {{trx}}\n\nBEP20 (USDT): {{bsc}}\n\nEnvoyez de l\'USDT à ces adresses pour recharger votre solde.',
-        help: 'Commandes disponibles:\n\n/start - Démarrer le bot\n/balance - Vérifier votre solde\n/products - Voir les produits disponibles\n/wallet - Voir vos adresses de portefeuille\n/language - Changer de langue\n/help - Afficher ce message d\'aide'
+        refresh_balance: 'Solde actualisé!',
+        error: 'Une erreur s\'est produite. Veuillez réessayer plus tard.'
       }
     },
     ar: {
       translation: {
-        welcome: 'مرحبًا بك في متجر تيليجرام! اختر لغتك:',
+        welcome: 'مرحبًا بك في متجر تيليجرام! 🛍️\nاستخدم /help لرؤية الأوامر المتاحة.',
+        help: 'الأوامر المتاحة:\n/start - بدء البوت\n/balance - التحقق من رصيدك\n/products - عرض المنتجات المتاحة\n/language - تغيير اللغة\n/help - عرض رسالة المساعدة هذه',
+        language_selection: 'يرجى اختيار لغتك المفضلة:',
         language_changed: 'تم تغيير اللغة بنجاح!',
         balance: 'رصيدك الحالي: {{balance}} USDT\n\nTRC20: {{trc20}} USDT\nBEP20: {{bep20}} USDT\n\nآخر تحديث: {{time}}',
-        refresh_balance: 'تم تحديث الرصيد!',
         products: 'المنتجات المتاحة:',
-        product_details: '🛍️ {{name}}\n\n💰 السعر: {{price}} USDT\n\n📝 الوصف: {{description}}\n\n📦 متوفر: {{stock}}',
-        buy_success: 'لقد اشتريت بنجاح {{name}} مقابل {{price}} USDT!',
-        insufficient_funds: 'رصيد غير كافٍ. يرجى إيداع المزيد من USDT.',
+        product_details: '🛍️ {{name}}\n\n💰 السعر: {{price}} USDT\n📝 {{description}}\n\n📦 متوفر: {{stock}}',
+        buy_success: 'تم الشراء بنجاح!\nلقد اشتريت {{name}} مقابل {{price}} USDT.',
+        insufficient_funds: 'رصيد غير كافٍ. يرجى إعادة شحن رصيدك.',
         out_of_stock: 'هذا المنتج غير متوفر حاليًا.',
-        error: 'حدث خطأ. يرجى المحاولة مرة أخرى لاحقًا.',
-        wallet_info: 'عناوين محفظتك:\n\nTRC20 (USDT): {{trx}}\n\nBEP20 (USDT): {{bsc}}\n\nأرسل USDT إلى هذه العناوين لزيادة رصيدك.',
-        help: 'الأوامر المتاحة:\n\n/start - بدء البوت\n/balance - التحقق من رصيدك\n/products - عرض المنتجات المتاحة\n/wallet - عرض عناوين محفظتك\n/language - تغيير اللغة\n/help - عرض رسالة المساعدة هذه'
+        refresh_balance: 'تم تحديث الرصيد!',
+        error: 'حدث خطأ. يرجى المحاولة مرة أخرى لاحقًا.'
       }
     }
   }

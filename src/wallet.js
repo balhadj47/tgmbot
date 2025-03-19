@@ -1,100 +1,81 @@
-const bip39 = require('bip39');
-const ethers = require('ethers');
-const { query } = require('./database');
-
-// We'll use a mock implementation for TronWeb since we're having ESM compatibility issues
-let mockTronWeb = {
-  address: {
-    fromPrivateKey: (privateKey) => {
-      // This is a simplified mock that returns a placeholder address
-      return `T${privateKey.substring(0, 32)}`;
-    }
-  },
-  contract: () => ({
-    at: () => ({
-      balanceOf: () => ({
-        call: async () => "0" // Mock zero balance
-      })
-    })
-  }),
-  fromSun: (value) => value
-};
-
-// BSC provider
-const bscProvider = new ethers.providers.JsonRpcProvider('https://bsc-dataseed.binance.org/');
+const { db } = require('./database');
+const { initializeTronWeb } = require('./tronWebWrapper');
+const { ethers } = require('ethers');
 
 // USDT contract addresses
-const USDT_TRC20_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'; // USDT on Tron
-const USDT_BEP20_CONTRACT = '0x55d398326f99059fF775485246999027B3197955'; // USDT on BSC
+const USDT_TRC20_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'; // Tron USDT
+const USDT_BEP20_CONTRACT = '0x55d398326f99059fF775485246999027B3197955'; // BSC USDT
 
-// USDT BEP20 ABI (minimal for balance checking)
-const USDT_ABI = [
-  {
-    "constant": true,
-    "inputs": [{"name": "_owner", "type": "address"}],
-    "name": "balanceOf",
-    "outputs": [{"name": "balance", "type": "uint256"}],
-    "type": "function"
-  }
+// ABI for ERC20 tokens (simplified)
+const ERC20_ABI = [
+  "function balanceOf(address owner) view returns (uint256)"
 ];
 
-// Initialize TronWeb (mock version)
-async function initializeTronWeb() {
-  console.log('Using mock TronWeb implementation due to ESM compatibility issues');
-  return mockTronWeb;
-}
+// Initialize providers
+let tronWeb = null;
+let bscProvider = null;
 
-// Generate a new wallet with mnemonic
-async function generateWallet() {
+async function initializeTronWeb() {
   try {
-    // Generate a random mnemonic
-    const mnemonic = bip39.generateMnemonic();
+    const TronWeb = require('tronweb');
+    tronWeb = new TronWeb({
+      fullHost: 'https://api.trongrid.io',
+      headers: { "TRON-PRO-API-KEY": process.env.TRX_API_KEY },
+    });
     
-    // Use mock TronWeb
-    const tronWebInstance = await initializeTronWeb();
-    
-    // Derive TRX address
-    const privateKey = ethers.utils.hdNode.fromMnemonic(mnemonic).privateKey;
-    const trxAddress = tronWebInstance.address.fromPrivateKey(privateKey.substring(2));
-    
-    // Derive BSC address
-    const wallet = ethers.Wallet.fromMnemonic(mnemonic);
-    const bscAddress = wallet.address;
-    
-    return {
-      mnemonic,
-      trxAddress,
-      bscAddress
-    };
+    console.log('TronWeb initialized successfully');
+    return tronWeb;
   } catch (error) {
-    console.error('Error generating wallet:', error);
-    // Fallback to returning only BSC address if TronWeb fails
-    const mnemonic = bip39.generateMnemonic();
-    const wallet = ethers.Wallet.fromMnemonic(mnemonic);
-    return {
-      mnemonic,
-      trxAddress: 'TRX_GENERATION_FAILED', // Placeholder
-      bscAddress: wallet.address
-    };
+    console.error('Error initializing TronWeb:', error);
+    throw error;
   }
 }
 
-// Get TRC20 USDT balance (mock implementation)
-async function getTRC20Balance(address) {
+function initializeBscProvider() {
   try {
-    console.log('Using mock TRC20 balance check');
-    return 0; // Mock implementation returns 0
+    // Use BSC RPC endpoint
+    bscProvider = new ethers.providers.JsonRpcProvider('https://bsc-dataseed.binance.org/');
+    console.log('BSC provider initialized successfully');
+    return bscProvider;
+  } catch (error) {
+    console.error('Error initializing BSC provider:', error);
+    throw error;
+  }
+}
+
+async function getTrc20Balance(address) {
+  try {
+    if (!tronWeb) {
+      await initializeTronWeb();
+    }
+    
+    // Get USDT contract instance
+    const contract = await tronWeb.contract().at(USDT_TRC20_CONTRACT);
+    
+    // Call balanceOf function
+    const balance = await contract.balanceOf(address).call();
+    
+    // Convert from smallest unit (6 decimals for USDT)
+    return parseFloat(tronWeb.fromSun(balance)) / 1000000;
   } catch (error) {
     console.error('Error getting TRC20 balance:', error);
     return 0;
   }
 }
 
-// Get BEP20 USDT balance
-async function getBEP20Balance(address) {
+async function getBep20Balance(address) {
   try {
-    const contract = new ethers.Contract(USDT_BEP20_CONTRACT, USDT_ABI, bscProvider);
+    if (!bscProvider) {
+      initializeBscProvider();
+    }
+    
+    // Get USDT contract instance
+    const contract = new ethers.Contract(USDT_BEP20_CONTRACT, ERC20_ABI, bscProvider);
+    
+    // Call balanceOf function
     const balance = await contract.balanceOf(address);
+    
+    // Convert from smallest unit (18 decimals for BEP20 USDT)
     return parseFloat(ethers.utils.formatUnits(balance, 18));
   } catch (error) {
     console.error('Error getting BEP20 balance:', error);
@@ -102,47 +83,47 @@ async function getBEP20Balance(address) {
   }
 }
 
-// Update user's wallet balances
 async function updateUserBalances(userId) {
   try {
-    // Get user's wallet addresses
-    const [rows] = await query(
-      'SELECT trx_address, bsc_address FROM users WHERE user_id = ?',
-      [userId]
-    );
+    // Find user in database
+    let user = db.users.find(u => u.id === userId);
     
-    if (rows.length === 0) {
-      throw new Error('User not found');
+    // If user doesn't exist, create a new one
+    if (!user) {
+      user = {
+        id: userId,
+        trc20_address: '',
+        bep20_address: '',
+        language: 'en',
+        last_balance_refresh: null
+      };
+      db.users.push(user);
     }
     
-    const { trx_address, bsc_address } = rows[0];
-    
-    // Get balances
+    // For development, use mock balances if addresses are empty
     let trc20Balance = 0;
     let bep20Balance = 0;
     
-    // Only try to get TRC20 balance if the address is valid
-    if (trx_address && trx_address !== 'TRX_GENERATION_FAILED') {
-      trc20Balance = await getTRC20Balance(trx_address);
+    if (!user.trc20_address) {
+      trc20Balance = 100; // Mock balance
+    } else {
+      trc20Balance = await getTrc20Balance(user.trc20_address);
     }
     
-    // Get BEP20 balance
-    if (bsc_address) {
-      bep20Balance = await getBEP20Balance(bsc_address);
+    if (!user.bep20_address) {
+      bep20Balance = 50; // Mock balance
+    } else {
+      bep20Balance = await getBep20Balance(user.bep20_address);
     }
     
-    const totalBalance = trc20Balance + bep20Balance;
+    // Update last refresh time
+    user.last_balance_refresh = new Date();
     
-    // Update user's balances in database
-    await query(
-      'UPDATE users SET usdt_trc20_balance = ?, usdt_bsc20_balance = ?, balance = ?, last_balance_refresh = NOW() WHERE user_id = ?',
-      [trc20Balance, bep20Balance, totalBalance, userId]
-    );
-    
+    // Return balances
     return {
       trc20Balance,
       bep20Balance,
-      totalBalance
+      totalBalance: trc20Balance + bep20Balance
     };
   } catch (error) {
     console.error('Error updating user balances:', error);
@@ -151,9 +132,6 @@ async function updateUserBalances(userId) {
 }
 
 module.exports = {
-  generateWallet,
-  getTRC20Balance,
-  getBEP20Balance,
-  updateUserBalances,
-  initializeTronWeb
+  initializeTronWeb,
+  updateUserBalances
 };
